@@ -11,6 +11,7 @@
 
 一个 HTML 文件，拖进浏览器就能用。<br>
 没有 npm，没有构建，没有服务器，数据只存在你自己的设备上。
+办公牛马必备，数据保存在本地可以随时回看。
 
 [在线体验 →](https://medicialcoder.github.io/DayFlow/DayFlow.html)
 
