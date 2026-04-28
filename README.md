@@ -2,7 +2,7 @@
 
 # DayFlow
 
-**零依赖 · 单文件 · 可离线的每日任务管理 PWA**
+**每日任务记录及日报自动生成助手，本地浏览器可以直接打开使用！**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-Offline%20Ready-brightgreen)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
