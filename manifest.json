@@ -1,0 +1,19 @@
+{
+  "name": "DayFlow · 日程管理",
+  "short_name": "DayFlow",
+  "description": "每日任务管理与日报生成",
+  "start_url": "./DayFlow.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1a1f36",
+  "theme_color": "#1a1f36",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

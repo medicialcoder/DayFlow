@@ -1,0 +1,18 @@
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+
+# 培训材料和内部文档（不上传）
+2025年1月莆田用户培训/
+RayStation使用说明/
+TPS使用说明.zip
+泛维OA系统使用手册.pdf
+零信任连接操作文档.pdf
+Initial validation and commissioning experience*.pdf
+
+# Claude 配置
+.claude/
