@@ -12,7 +12,7 @@
 一个 HTML 文件，拖进浏览器就能用。<br>
 没有 npm，没有构建，没有服务器，数据只存在你自己的设备上。
 
-[在线体验 →](https://your-demo-link)
+[在线体验 →](https://medicialcoder.github.io/DayFlow/DayFlow.html)
 
 </div>
 
