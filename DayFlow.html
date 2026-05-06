@@ -779,6 +779,58 @@
       text-align: right;
     }
 
+    /* ─── TOMORROW PLAN ─────────────────────────────── */
+    .tmr-plan {
+      margin-top: 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px 14px;
+    }
+    .tmr-plan-hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .tmr-plan-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+    .tmr-plan-hint {
+      font-size: 11px;
+      color: var(--text3);
+    }
+    .tmr-plan-ta {
+      width: 100%;
+      min-height: 64px;
+      max-height: 200px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      font: inherit;
+      font-size: 13px;
+      color: inherit;
+      resize: vertical;
+      box-sizing: border-box;
+      transition: border-color .15s;
+    }
+    .tmr-plan-ta:focus { outline: none; border-color: var(--accent); }
+    .tmr-plan-ta::placeholder { color: var(--text3); }
+
+    .hist-plan {
+      margin: 4px 0 12px;
+      padding: 10px 12px;
+      background: var(--accent-dim);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text2);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     /* ─── UPCOMING STRIP ─────────────────────────────── */
     .upcoming-strip {
       display: none;
@@ -1620,6 +1672,20 @@
 
     <!-- Task render target -->
     <div id="taskRoot"></div>
+
+    <!-- 明日计划 -->
+    <div class="tmr-plan">
+      <div class="tmr-plan-hdr">
+        <span class="tmr-plan-title">📝 明日计划</span>
+        <span class="tmr-plan-hint" id="tmrPlanHint">自动保存</span>
+      </div>
+      <textarea class="tmr-plan-ta" id="tmrPlanTa"
+        placeholder="按 Enter 自动编号，简要写下明天打算做的事…"
+        oninput="onPlanInput()"
+        onkeydown="onPlanKeydown(event)"
+        onfocus="onPlanFocus()"
+        onblur="onPlanBlur()"></textarea>
+    </div>
   </div>
 </main>
 
@@ -1897,6 +1963,7 @@ const PRI_META = {
 const NOW    = new Date();
 const DKEY   = `df_${NOW.getFullYear()}_${pad(NOW.getMonth()+1)}_${pad(NOW.getDate())}`;
 const LKEY   = 'df_longterm';
+const PKEY   = `dfp_${NOW.getFullYear()}_${pad(NOW.getMonth()+1)}_${pad(NOW.getDate())}`;
 
 let tasks     = [];
 let ltTasks   = [];
@@ -1947,6 +2014,91 @@ function saveLongterm() {
     _dfCacheAdd(LKEY);
   }
   catch (e) { if (e.name === 'QuotaExceededError') openQuotaModal(); }
+}
+
+function planKeyFor(dayKey) {
+  // df_YYYY_M_D → dfp_YYYY_M_D
+  return 'dfp_' + dayKey.slice(3);
+}
+
+function loadPlan(key) {
+  try { return localStorage.getItem(key || PKEY) || ''; }
+  catch { return ''; }
+}
+
+function savePlanText(text) {
+  try {
+    if (text && text.trim()) localStorage.setItem(PKEY, text);
+    else localStorage.removeItem(PKEY);
+  } catch (e) { if (e.name === 'QuotaExceededError') openQuotaModal(); }
+}
+
+let _planSaveTimer = null;
+function onPlanInput() {
+  const v = document.getElementById('tmrPlanTa').value;
+  const hint = document.getElementById('tmrPlanHint');
+  if (hint) hint.textContent = '编辑中…';
+  clearTimeout(_planSaveTimer);
+  _planSaveTimer = setTimeout(() => {
+    savePlanText(v);
+    if (hint) hint.textContent = '已保存';
+    setTimeout(() => { if (hint) hint.textContent = '自动保存'; }, 1200);
+  }, 350);
+}
+
+// Strip any leading "1. " / "1、" / "1)" marker from a line.
+const PLAN_NUM_RE = /^\s*\d+[.、)]\s*/;
+
+// Re-number every non-empty line as "1. xxx", "2. xxx", ...
+// Used for display, report output, and on-blur cleanup.
+function normalizePlanLines(text) {
+  if (!text) return '';
+  let n = 0;
+  return text.split(/\r?\n/).map(l => {
+    const body = l.replace(PLAN_NUM_RE, '').trim();
+    if (!body) return '';
+    n++;
+    return `${n}. ${body}`;
+  }).filter(Boolean).join('\n');
+}
+
+function onPlanFocus() {
+  const ta = document.getElementById('tmrPlanTa');
+  if (!ta.value) {
+    ta.value = '1. ';
+    ta.setSelectionRange(3, 3);
+  }
+}
+
+function onPlanKeydown(e) {
+  if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey) return;
+  e.preventDefault();
+  const ta = e.target;
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const before = ta.value.slice(0, start);
+  const after  = ta.value.slice(end);
+  // Next number = (max existing N. prefix in the textarea) + 1
+  const all = (before + after).split(/\r?\n/);
+  const nums = all.map(l => {
+    const m = l.match(/^\s*(\d+)[.、)]/);
+    return m ? parseInt(m[1], 10) : 0;
+  });
+  const next = (nums.length ? Math.max(...nums) : 0) + 1;
+  const ins = `\n${next}. `;
+  ta.value = before + ins + after;
+  const pos = start + ins.length;
+  ta.setSelectionRange(pos, pos);
+  onPlanInput();
+}
+
+function onPlanBlur() {
+  const ta = document.getElementById('tmrPlanTa');
+  const cleaned = normalizePlanLines(ta.value);
+  if (cleaned !== ta.value) {
+    ta.value = cleaned;
+    savePlanText(cleaned);
+  }
 }
 
 let _quotaModalShown = false;
@@ -2013,6 +2165,14 @@ function exportData() {
       count++;
     }
   }
+  // Also include plan keys (dfp_*) which aren't tracked in _dfKeyCache.
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('dfp_')) {
+      const v = localStorage.getItem(k);
+      if (v !== null) { payload.data[k] = v; count++; }
+    }
+  }
   if (!count) { toast('暂无数据可导出'); return; }
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -2047,7 +2207,7 @@ function importData() {
       try { obj = migrateImportPayload(obj); }
       catch (err) { toast('❌ 备份版本无法迁移：' + err.message); return; }
       const entries = Object.entries(obj.data).filter(([k, v]) =>
-        typeof k === 'string' && k.startsWith('df_') && typeof v === 'string'
+        typeof k === 'string' && (k.startsWith('df_') || k.startsWith('dfp_')) && typeof v === 'string'
       );
       if (!entries.length) { toast('❌ 文件中没有 DayFlow 数据'); return; }
 
@@ -2062,6 +2222,11 @@ function importData() {
           localStorage.removeItem(k);
         }
         _dfKeyCache.clear();
+        // Also clear plan keys
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('dfp_')) localStorage.removeItem(k);
+        }
       }
 
       let imported = 0, skipped = 0;
@@ -2071,6 +2236,12 @@ function importData() {
             localStorage.setItem(k, v);
             imported++;
           } else { skipped++; }
+          continue;
+        }
+        if (k.startsWith('dfp_')) {
+          // Plan: plain string, no JSON parse
+          localStorage.setItem(k, v);
+          imported++;
           continue;
         }
         try {
@@ -2087,6 +2258,8 @@ function importData() {
       sortMode = localStorage.getItem('df_sortMode') || 'priority';
       if (typeof updateSortBadge === 'function') updateSortBadge();
       render();
+      const planTa = document.getElementById('tmrPlanTa');
+      if (planTa) planTa.value = loadPlan();
       toast(`✅ 导入完成：成功 ${imported} 项${skipped ? `，跳过 ${skipped} 项` : ''}`);
     };
     reader.onerror = () => toast('❌ 读取文件失败');
@@ -2821,7 +2994,7 @@ function onDragEnd() {
 /* ═══════════════════════════════════════════════
    Report (shared builder)
 ═══════════════════════════════════════════════ */
-function buildReportFrom(dayTasks, dateStr) {
+function buildReportFrom(dayTasks, dateStr, planText) {
   const total   = dayTasks.length;
   const done    = dayTasks.filter(t => t.done).length;
   const pending = total - done;
@@ -2858,10 +3031,21 @@ function buildReportFrom(dayTasks, dateStr) {
       if (!meta) continue;
       r += `\n【${meta.label}】\n`;
       for (const t of items) {
-        const ts  = t.doneAt ? `  [${fmtTs(t.doneAt)}]` : '';
-        const dur = t.min    ? `（预计 ${fmtMin(t.min)}）` : '';
-        r += `${no++}. ${t.title}${dur}${ts}\n`;
-        if (t.notes) r += `   备注：${t.notes}\n`;
+        let timeStr = '';
+        if (t.doneAt) {
+          const end = new Date(t.doneAt);
+          const endHM = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+          if (t.min) {
+            const start = new Date(t.doneAt - t.min * 60000);
+            const startHM = `${pad(start.getHours())}:${pad(start.getMinutes())}`;
+            timeStr = `${startHM}-${endHM}`;
+          } else {
+            timeStr = endHM;
+          }
+        }
+        r += `${no++}. ${t.title}\n`;
+        if (timeStr) r += `   时间 ${timeStr}\n`;
+        r += `   工作内容：${t.notes || t.title}\n`;
       }
     }
     r += '\n';
@@ -2881,7 +3065,8 @@ function buildReportFrom(dayTasks, dateStr) {
 
   r += `明日计划\n`;
   r += line(10) + '\n';
-  r += `（请填写明日工作计划）\n\n`;
+  const planFmt = normalizePlanLines((planText || '').trim());
+  r += (planFmt || '（请填写明日工作计划）') + '\n\n';
 
   r += `工作总结\n`;
   r += line(10) + '\n';
@@ -2901,7 +3086,7 @@ function buildReportFrom(dayTasks, dateStr) {
 }
 
 function buildReport() {
-  return buildReportFrom(tasks, chineseDate());
+  return buildReportFrom(tasks, chineseDate(), loadPlan());
 }
 
 /* ═══════════════════════════════════════════════
@@ -3002,7 +3187,13 @@ function selectHistDay(key) {
   const listEl = document.getElementById('histTaskList');
 
   if (dayTasks.length === 0) {
-    listEl.innerHTML = `<div style="text-align:center;color:var(--text3);padding:48px 0;font-size:13px">当天无任务记录</div>`;
+    const histPlanOnly = normalizePlanLines(loadPlan(planKeyFor(key)));
+    if (histPlanOnly) {
+      listEl.innerHTML = `<div class="hist-group-lbl">📝 明日计划</div>
+        <div class="hist-plan">${esc(histPlanOnly)}</div>`;
+    } else {
+      listEl.innerHTML = `<div style="text-align:center;color:var(--text3);padding:48px 0;font-size:13px">当天无任务记录</div>`;
+    }
     _histKey = key;
     return;
   }
@@ -3015,6 +3206,11 @@ function selectHistDay(key) {
   if (pending.length) {
     html += `<div class="hist-group-lbl">⏳ 未完成 · ${pending.length} 项</div>`;
     html += pending.sort((a,b)=>PRI_META[a.pri].order-PRI_META[b.pri].order).map(histCardHTML).join('');
+  }
+  const histPlan = normalizePlanLines(loadPlan(planKeyFor(key)));
+  if (histPlan) {
+    html += `<div class="hist-group-lbl">📝 明日计划</div>
+      <div class="hist-plan">${esc(histPlan)}</div>`;
   }
   listEl.innerHTML = html;
   _histKey = key;
@@ -3045,7 +3241,7 @@ function downloadHistReport() {
   let dayTasks = [];
   try { dayTasks = JSON.parse(localStorage.getItem(_histKey) || '[]'); } catch {}
   const { y, m, d, full } = parseKeyDate(_histKey);
-  const text = buildReportFrom(dayTasks, full);
+  const text = buildReportFrom(dayTasks, full, loadPlan(planKeyFor(_histKey)));
   const name = `日报_${y}${pad(m)}${pad(d)}.txt`;
   const blob = new Blob([text], { type:'text/plain;charset=utf-8' });
   const a = Object.assign(document.createElement('a'), {
@@ -3556,6 +3752,7 @@ loadLongterm();
 sortMode = localStorage.getItem('df_sortMode') || 'priority';
 updateSortBadge();
 render();
+document.getElementById('tmrPlanTa').value = normalizePlanLines(loadPlan());
 
 // Reload when the user returns on a new day
 document.addEventListener('visibilitychange', () => {
@@ -3569,6 +3766,10 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('storage', e => {
   if (e.key === DKEY)  { loadTasks();    render(); }
   if (e.key === LKEY)  { loadLongterm(); render(); }
+  if (e.key === PKEY)  {
+    const ta = document.getElementById('tmrPlanTa');
+    if (ta && document.activeElement !== ta) ta.value = loadPlan();
+  }
 });
 </script>
 
