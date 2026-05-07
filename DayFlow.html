@@ -4,12 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DayFlow · 日程管理</title>
-  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a1f36">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="DayFlow">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -3771,14 +3766,6 @@ window.addEventListener('storage', e => {
     if (ta && document.activeElement !== ta) ta.value = loadPlan();
   }
 });
-</script>
-
-<script>
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
-  }
 </script>
 </body>
 </html>
